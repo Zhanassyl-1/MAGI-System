@@ -67,14 +67,14 @@ def save_task(task_data: Dict[str, Any]) -> str:
     task_id = task_data["id"]
     slug = re.sub(r"[^a-zA-Z0-9_-]", "-", task_data["title"].lower())[:40].strip("-")
     filename = f"{task_id}-{slug}.json"
-    
+
     # Check if file with this ID already exists under another slug
     existing_files = glob.glob(os.path.join(TASKS_DIR, f"{task_id}*.json"))
     if existing_files:
         filepath = existing_files[0]
     else:
         filepath = os.path.join(TASKS_DIR, filename)
-        
+
     task_data["updated_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
     with open(filepath, "w", encoding="utf-8") as f:
         json.dump(task_data, f, indent=2)
@@ -103,7 +103,7 @@ def acquire_lock(task_id: str, agent_id: str) -> bool:
         if existing_lock.get("agent", "").lower() == agent_id.lower():
             return True  # Already held by this agent
         return False
-        
+
     os.makedirs(LOCKS_DIR, exist_ok=True)
     lock_data = {
         "task_id": task_id,
@@ -157,12 +157,12 @@ def create_and_checkout_branch(branch_name: str) -> bool:
 def sync_tasks_md():
     tasks = load_all_tasks()
     sorted_tasks = sorted(tasks.values(), key=lambda t: t.get("id", ""))
-    
+
     table_lines = [
         "| Task ID | Title | Team | Assigned | Status | Priority | Dependencies | Branch |",
         "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
     ]
-    
+
     for t in sorted_tasks:
         tid = t.get("id", "")
         title = t.get("title", "")
@@ -175,7 +175,7 @@ def sync_tasks_md():
         table_lines.append(f"| `{tid}` | {title} | `{team}` | `{assigned}` | **{status}** | `{priority}` | {deps} | `{branch}` |")
 
     tasks_table_str = "\n".join(table_lines)
-    
+
     content = f"""# Master Task Board (TASKS.md)
 
 This file is automatically synchronized with granular task definitions in `.magi/tasks/`.
@@ -238,7 +238,7 @@ def cmd_list(args):
         if args.status and t.get("status") != args.status.upper():
             continue
         filtered.append(t)
-        
+
     filtered.sort(key=lambda t: t.get("id"))
     print(f"\n{'ID':<10} {'TEAM':<12} {'ASSIGNED':<10} {'STATUS':<14} {'PRIORITY':<10} {'TITLE'}")
     print("-" * 80)
@@ -253,9 +253,9 @@ def cmd_next(args):
     if not team:
         print(f"[ERROR] Unknown agent ID: {agent_id}. Valid IDs: {list(TEAM_MAP.keys())}", file=sys.stderr)
         sys.exit(1)
-        
+
     tasks = load_all_tasks()
-    
+
     # Check if agent already has an active task
     active = [t for t in tasks.values() if t.get("assigned_agent") == agent_id and t.get("status") in ["CLAIMED", "IN_PROGRESS", "PR_OPEN", "UNDER_QA"]]
     if active:
@@ -277,15 +277,15 @@ def cmd_next(args):
             continue
         if dependencies_satisfied(t, tasks):
             available.append(t)
-            
+
     if not available:
         print(f"[INFO] No eligible tasks ready for pickup by team '{team}'.")
         return
-        
+
     # Sort by priority then ID
     available.sort(key=lambda t: (-PRIORITY_WEIGHT.get(t.get("priority", "MEDIUM"), 1), t["id"]))
     best_task = available[0]
-    
+
     print(f"\n[NEXT TASK RECOMMENDATION]")
     print(f"  Task ID:     {best_task['id']}")
     print(f"  Title:       {best_task['title']}")
@@ -306,35 +306,35 @@ def claim_task(task_id: str, agent_id: str, create_branch: bool = True):
     if task_id not in tasks:
         print(f"[ERROR] Task {task_id} does not exist.", file=sys.stderr)
         sys.exit(1)
-        
+
     task = tasks[task_id]
     team = get_agent_team(agent_id)
     if team != "management" and task.get("team") != team:
         print(f"[ERROR] Agent {agent_id} ({team}) cannot claim task for team {task.get('team')}.", file=sys.stderr)
         sys.exit(1)
-        
+
     if not dependencies_satisfied(task, tasks):
         print(f"[ERROR] Dependencies not satisfied for {task_id}. Required: {task.get('dependencies')}", file=sys.stderr)
         sys.exit(1)
-        
+
     if not acquire_lock(task_id, agent_id):
         lock_info = is_task_locked(task_id)
         print(f"[ERROR] Cannot claim {task_id}: locked by {lock_info.get('agent')}", file=sys.stderr)
         sys.exit(1)
-        
+
     slug = re.sub(r"[^a-zA-Z0-9_-]", "-", task["title"].lower())[:30].strip("-")
     branch_name = f"{task['team']}/{agent_id.lower()}/{task_id.lower()}-{slug}"
-    
+
     task["assigned_agent"] = agent_id.upper()
     task["status"] = "IN_PROGRESS"
     task["branch"] = branch_name
-    
+
     save_task(task)
     sync_tasks_md()
     log_progress("CLAIM", task_id, agent_id, f"Claimed task and created branch {branch_name}")
-    
+
     print(f"[SUCCESS] Claimed {task_id} for agent {agent_id}.")
-    
+
     if create_branch:
         print(f"[GIT] Creating/switching to branch: {branch_name}")
         create_and_checkout_branch(branch_name)
@@ -352,11 +352,11 @@ def cmd_release(args):
     if task_id not in tasks:
         print(f"[ERROR] Task {task_id} not found.", file=sys.stderr)
         sys.exit(1)
-        
+
     task = tasks[task_id]
     if not release_lock(task_id, agent_id, force=args.force):
         sys.exit(1)
-        
+
     task["assigned_agent"] = None
     task["status"] = "TODO"
     save_task(task)
@@ -372,7 +372,7 @@ def cmd_submit_pr(args):
     if task_id not in tasks:
         print(f"[ERROR] Task {task_id} not found.", file=sys.stderr)
         sys.exit(1)
-        
+
     task = tasks[task_id]
     task["status"] = "UNDER_QA"
     task["pr_number"] = args.pr
@@ -389,7 +389,7 @@ def cmd_complete(args):
     if task_id not in tasks:
         print(f"[ERROR] Task {task_id} not found.", file=sys.stderr)
         sys.exit(1)
-        
+
     task = tasks[task_id]
     task["status"] = "DONE"
     task["completed_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
@@ -411,12 +411,12 @@ def cmd_status(args):
     for t in tasks.values():
         st = t.get("status", "UNKNOWN")
         counts[st] = counts.get(st, 0) + 1
-        
+
     print("\n=== MAGI-System Overview ===")
     print(f"Total Tasks: {len(tasks)}")
     for status, count in sorted(counts.items()):
         print(f"  {status:<15}: {count}")
-        
+
     locks = glob.glob(os.path.join(LOCKS_DIR, "*.lock"))
     print(f"\nActive Locks: {len(locks)}")
     for lock in locks:
@@ -432,13 +432,13 @@ def cmd_status(args):
 def main():
     parser = argparse.ArgumentParser(description="MAGI-System Autonomous Task Manager CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
-    
+
     # list
     p_list = subparsers.add_parser("list", help="List tasks")
     p_list.add_argument("--team", choices=["frontend", "backend", "qa", "management"], help="Filter by team")
     p_list.add_argument("--status", help="Filter by status (TODO, IN_PROGRESS, DONE, etc.)")
     p_list.set_defaults(func=cmd_list)
-    
+
     # next
     p_next = subparsers.add_parser("next", help="Find next eligible task for agent")
     p_next.add_argument("--agent", required=True, help="Agent ID (e.g. FE-1, BE-2, QA-3)")
@@ -446,14 +446,14 @@ def main():
     p_next.add_argument("--no-branch", action="store_true", help="Do not switch git branch automatically")
     p_next.add_argument("--force", action="store_true", help="Ignore active task checks")
     p_next.set_defaults(func=cmd_next)
-    
+
     # claim
     p_claim = subparsers.add_parser("claim", help="Claim a specific task")
     p_claim.add_argument("task_id", help="Task ID (e.g. TASK-001)")
     p_claim.add_argument("--agent", required=True, help="Agent ID")
     p_claim.add_argument("--no-branch", action="store_true", help="Do not create/switch branch")
     p_claim.set_defaults(func=cmd_claim)
-    
+
     # release
     p_release = subparsers.add_parser("release", help="Release a claimed task")
     p_release.add_argument("task_id", help="Task ID")
@@ -461,28 +461,28 @@ def main():
     p_release.add_argument("--reason", help="Reason for releasing task")
     p_release.add_argument("--force", action="store_true", help="Force release another agent's lock (PM only)")
     p_release.set_defaults(func=cmd_release)
-    
+
     # submit-pr
     p_submit = subparsers.add_parser("submit-pr", help="Update task after opening PR")
     p_submit.add_argument("task_id", help="Task ID")
     p_submit.add_argument("--agent", required=True, help="Agent ID")
     p_submit.add_argument("--pr", type=int, required=True, help="Pull Request number")
     p_submit.set_defaults(func=cmd_submit_pr)
-    
+
     # complete
     p_complete = subparsers.add_parser("complete", help="Mark task as DONE after PR merge")
     p_complete.add_argument("task_id", help="Task ID")
     p_complete.add_argument("--agent", required=True, help="Agent ID")
     p_complete.set_defaults(func=cmd_complete)
-    
+
     # sync-board
     p_sync = subparsers.add_parser("sync-board", help="Synchronize TASKS.md with .magi/tasks/")
     p_sync.set_defaults(func=cmd_sync)
-    
+
     # status
     p_status = subparsers.add_parser("status", help="Show system status and locks")
     p_status.set_defaults(func=cmd_status)
-    
+
     args = parser.parse_args()
     args.func(args)
 
