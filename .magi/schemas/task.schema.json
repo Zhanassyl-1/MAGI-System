@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MagiTask",
+  "type": "object",
+  "required": [
+    "id",
+    "title",
+    "team",
+    "status",
+    "priority",
+    "dependencies",
+    "description",
+    "acceptance_criteria",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^TASK-[0-9]{3,}$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 5
+    },
+    "team": {
+      "type": "string",
+      "enum": ["frontend", "backend", "qa", "management"]
+    },
+    "assigned_agent": {
+      "type": ["string", "null"]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "BACKLOG",
+        "TODO",
+        "CLAIMED",
+        "IN_PROGRESS",
+        "PR_OPEN",
+        "UNDER_QA",
+        "APPROVED",
+        "DONE",
+        "BLOCKED"
+      ]
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "description": {
+      "type": "string"
+    },
+    "acceptance_criteria": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "branch": {
+      "type": ["string", "null"]
+    },
+    "pr_number": {
+      "type": ["integer", "null"]
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "updated_at": {
+      "type": "string"
+    },
+    "completed_at": {
+      "type": ["string", "null"]
+    }
+  }
+}

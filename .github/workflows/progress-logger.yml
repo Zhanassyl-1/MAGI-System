@@ -1,0 +1,49 @@
+name: MAGI Progress Logger
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  log-merged-pr:
+    name: Record Merged PR to Progress Log
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Append to Progress Log
+        env:
+          PR_NUM: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          mkdir -p .magi/logs
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          CLEAN_TITLE=$(printf '%s' "$PR_TITLE" | tr '\r\n' '  ')
+          LOG_ENTRY="[$TIMESTAMP] [PR_MERGED] PR #$PR_NUM ('$CLEAN_TITLE') by @$PR_AUTHOR from $HEAD_BRANCH merged into main"
+          printf '%s\n' "$LOG_ENTRY" >> .magi/logs/progress.log
+          printf '%s\n' "$LOG_ENTRY"
+
+      - name: Commit Progress Log
+        env:
+          PR_NUM: ${{ github.event.pull_request.number }}
+        run: |
+          git config --local user.name "magi-coordinator[bot]"
+          git config --local user.email "magi-bot@users.noreply.github.com"
+          git add .magi/logs/progress.log
+          if ! git diff-index --quiet HEAD --; then
+            git commit -m "chore(magi): log merged PR #$PR_NUM in progress log"
+            git pull --rebase origin main
+            git push origin main
+          fi

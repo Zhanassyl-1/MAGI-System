@@ -1,0 +1,68 @@
+name: MAGI PR & QA Gate Enforcement
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-branch-and-pr:
+    name: Enforce Branch & PR Standards
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate Branch Convention
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          echo "Validating branch name: $HEAD_REF"
+          python3 scripts/validate_pr.py --branch "$HEAD_REF"
+
+      - name: Validate PR Description Checklist
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf '%s\n' "$PR_BODY" > pr_body.txt
+          python3 scripts/validate_pr.py --branch "$HEAD_REF" --pr-body-file pr_body.txt
+
+  qa-gate-check:
+    name: Verify QA Sign-off Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check QA Approval in PR Body or Labels
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
+        run: |
+          # 1. Check for official 'qa-approved' label
+          if echo "$PR_LABELS" | grep -qi '"qa-approved"'; then
+            echo "[QA GATE PASS] 'qa-approved' label detected."
+            exit 0
+          fi
+
+          # 2. Check for checked QA Approval verdict in PR description (- [x] **VERDICT**: `APPROVED`)
+          if echo "$PR_BODY" | grep -Eiq '^[[:space:]]*-[[:space:]]*\[[xX]\][[:space:]]*\*\*VERDICT\*\*:[[:space:]]*`?APPROVED`?' && ! echo "$PR_BODY" | grep -Eiq 'CHANGES_REQUESTED'; then
+            echo "[QA GATE PASS] QA Sign-off detected in PR description."
+            exit 0
+          fi
+
+          # 3. Check for direct QA Approval verdict without checklist syntax
+          if echo "$PR_BODY" | grep -Eiq '^[[:space:]]*\*\*VERDICT\*\*:[[:space:]]*`?APPROVED`?' && ! echo "$PR_BODY" | grep -Eiq 'CHANGES_REQUESTED'; then
+            echo "[QA GATE PASS] QA Sign-off detected in PR description."
+            exit 0
+          fi
+
+          echo "::error::[QA GATE BLOCKED] This PR has not yet received QA sign-off." >&2
+          echo "A QA Agent (QA-1, QA-2, or QA-3) must review the PR, execute tests, and approve before merging." >&2
+          echo "Sign-off can be granted by marking '- [x] **VERDICT**: \`APPROVED\`' in the QA section or applying the 'qa-approved' label." >&2
+          exit 1

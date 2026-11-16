@@ -1,0 +1,19 @@
+{
+  "id": "TASK-XXX",
+  "title": "Short descriptive task title",
+  "team": "frontend",
+  "assigned_agent": null,
+  "status": "TODO",
+  "priority": "MEDIUM",
+  "dependencies": [],
+  "description": "Detailed explanation of work to be performed.",
+  "acceptance_criteria": [
+    "Criterion 1",
+    "Criterion 2"
+  ],
+  "branch": null,
+  "pr_number": null,
+  "created_at": "YYYY-MM-DDTHH:MM:SSZ",
+  "updated_at": "YYYY-MM-DDTHH:MM:SSZ",
+  "completed_at": null
+}

@@ -1,0 +1,22 @@
+{
+  "id": "TASK-000",
+  "title": "Autonomous Multi-Agent Repository Infrastructure Initialization",
+  "team": "management",
+  "assigned_agent": "PM",
+  "status": "IN_PROGRESS",
+  "priority": "CRITICAL",
+  "dependencies": [],
+  "description": "Establish core MAGI-System architecture, agent documentation, task management system, GitHub automation workflows, and CLI scripts.",
+  "acceptance_criteria": [
+    "Directory structure and JSON schemas defined",
+    "AGENTS.md, PROJECT_PLAN.md, TASKS.md, FRONTEND.md, BACKEND.md, QA.md, MANAGER.md, CONTRIBUTING.md created",
+    "GitHub Actions workflows and PR templates configured",
+    "magi.py task management CLI operational and tested",
+    "No external website topic assumptions hardcoded"
+  ],
+  "branch": "main",
+  "pr_number": null,
+  "created_at": "2026-11-16T22:00:00Z",
+  "updated_at": "2026-11-16T22:00:00Z",
+  "completed_at": null
+}
